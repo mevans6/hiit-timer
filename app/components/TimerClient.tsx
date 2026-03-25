@@ -431,11 +431,11 @@ export default function TimerClient({ routineId }: { routineId: string }) {
 
         {/* Timer ring */}
         {state !== 'done' && (
-          <div className="relative flex items-center justify-center">
+          <div className="relative flex items-center justify-center w-full max-w-[420px]">
             {/* Glow background */}
             <div className={`absolute w-[28rem] h-[28rem] rounded-full blur-[100px] opacity-30 transition-colors duration-700 ${cfg.glowColor}`} />
 
-            <svg width="420" height="420" className="rotate-[-90deg]">
+            <svg viewBox="0 0 420 420" className="w-full rotate-[-90deg]">
               {/* Track */}
               <circle
                 cx="210" cy="210" r="168"
@@ -462,7 +462,7 @@ export default function TimerClient({ routineId }: { routineId: string }) {
                 className={`font-mono font-black tracking-tighter transition-colors duration-700 ${cfg.color} ${cfg.glow} ${
                   tickAnim ? 'tick-animate' : ''
                 } ${state === 'paused' ? 'opacity-50' : ''}`}
-                style={{ fontSize: '8.5rem', lineHeight: 1 }}
+                style={{ fontSize: 'clamp(2.5rem, 11vw, 4.5rem)', lineHeight: 1 }}
               >
                 {formatTime(timeLeft)}
               </span>
