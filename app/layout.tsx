@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { ThemeProvider } from "./lib/theme";
 
 export const metadata: Metadata = {
   title: "HIIT Timer",
@@ -30,8 +31,8 @@ export default function RootLayout({
       <head>
         <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
-      <body className="min-h-full bg-[#010108] text-slate-100 antialiased">
-        {children}
+      <body className="min-h-full bg-[#0d0d0d] text-slate-100 antialiased">
+        <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
   );

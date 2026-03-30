@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { v4 as uuidv4 } from 'uuid';
 import { getRoutine, saveRoutine } from '../lib/storage';
 import { Exercise, Routine } from '../types';
+import { useTheme } from '../lib/theme';
 
 interface Props {
   routineId: string; // 'new' or existing id
@@ -23,17 +24,17 @@ function DurationInput({
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className={`text-xs font-semibold uppercase tracking-wider ${color}`}>{label}</label>
-      <div className="flex items-center bg-[#060609] border border-white/10 rounded-xl overflow-hidden">
+      <label className={`text-xs uppercase tracking-wider ${color}`}>{label}</label>
+      <div className="flex items-center bg-[#0d0d0d] border border-white/8 rounded-xl overflow-hidden">
         <input
           type="number"
           min={0}
           max={999}
           value={value}
           onChange={e => onChange(Math.max(0, parseInt(e.target.value) || 0))}
-          className="w-16 px-3 py-2.5 bg-transparent text-center text-slate-100 text-sm focus:outline-none focus:bg-white/5"
+          className="w-16 px-3 py-2.5 bg-transparent text-center text-white/70 text-sm focus:outline-none"
         />
-        <span className="text-slate-600 text-xs pr-3">sec</span>
+        <span className="text-white/20 text-xs pr-3">s</span>
       </div>
     </div>
   );
@@ -41,6 +42,7 @@ function DurationInput({
 
 export default function RoutineEditor({ routineId }: Props) {
   const router = useRouter();
+  const { accent } = useTheme();
   const isNew = routineId === 'new';
 
   const [name, setName] = useState('');
@@ -114,121 +116,118 @@ export default function RoutineEditor({ routineId }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-[#010108]">
+    <div className="min-h-screen bg-[#0d0d0d]">
       {/* Header */}
-      <header className="border-b border-white/10 bg-[#08080f] sticky top-0 z-10">
-        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
+      <header className="sticky top-0 z-10 bg-[#0d0d0d] border-b border-white/6">
+        <div className="max-w-lg mx-auto px-6 py-4 flex items-center gap-3">
           <button
             onClick={() => router.push('/')}
-            className="p-2 rounded-xl hover:bg-white/8 text-slate-400 hover:text-slate-200 transition-colors"
+            className="p-1.5 text-white/25 hover:text-white/60 transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
           </button>
-          <h1 className="text-xl font-bold text-slate-100 flex-1">
+          <h1 className="text-sm font-medium text-white/60 flex-1">
             {isNew ? 'New Routine' : 'Edit Routine'}
           </h1>
           <button
             onClick={handleSave}
-            className="px-5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-sm font-semibold transition-all shadow-lg shadow-blue-900/30"
+            className="px-4 py-2 rounded-xl border border-white/10 text-white/50 hover:text-white/80 hover:border-white/20 text-sm transition-all"
           >
             Save
           </button>
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-lg mx-auto px-6 py-6 space-y-4">
         {/* Routine name */}
-        <div className="rounded-2xl border border-white/8 bg-[#0c0c14] p-5">
-          <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 block mb-2">
-            Routine Name
+        <div className="rounded-2xl border border-white/8 bg-[#161616] p-5">
+          <label className="text-xs uppercase tracking-wider block mb-2" style={{ color: accent }}>
+            Name
           </label>
           <input
             type="text"
             value={name}
             onChange={e => setName(e.target.value)}
             placeholder="e.g. Morning Cardio Blast"
-            className="w-full bg-[#060609] border border-white/10 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-600/60 focus:ring-1 focus:ring-purple-600/40 transition-colors text-base"
+            className="w-full bg-transparent text-white/80 placeholder-white/20 focus:outline-none text-base"
           />
         </div>
 
         {/* Durations */}
-        <div className="rounded-2xl border border-white/8 bg-[#0c0c14] p-5">
-          <h2 className="text-sm font-bold text-slate-300 mb-4">Durations</h2>
+        <div className="rounded-2xl border border-white/8 bg-[#161616] p-5">
+          <h2 className="text-xs uppercase tracking-wider mb-4" style={{ color: accent }}>Durations</h2>
           <div className="grid grid-cols-4 gap-3">
-            <DurationInput label="Warm Up" value={warmupDuration} onChange={setWarmupDuration} color="text-[#dd00ff]" />
-            <DurationInput label="Exercise" value={exerciseDuration} onChange={setExerciseDuration} color="text-[#ff003c]" />
-            <DurationInput label="Rest" value={restDuration} onChange={setRestDuration} color="text-[#7700ff]" />
-            <DurationInput label="Cool Down" value={cooldownDuration} onChange={setCooldownDuration} color="text-[#1d5dfc]" />
+            <DurationInput label="Warm Up" value={warmupDuration} onChange={setWarmupDuration} color="text-white/50" />
+            <DurationInput label="Exercise" value={exerciseDuration} onChange={setExerciseDuration} color="text-white/50" />
+            <DurationInput label="Rest" value={restDuration} onChange={setRestDuration} color="text-white/50" />
+            <DurationInput label="Cool Down" value={cooldownDuration} onChange={setCooldownDuration} color="text-white/50" />
           </div>
         </div>
 
         {/* Rounds */}
-        <div className="rounded-2xl border border-white/8 bg-[#0c0c14] p-5">
+        <div className="rounded-2xl border border-white/8 bg-[#161616] p-5">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-sm font-bold text-slate-300">Rounds</h2>
-              <p className="text-xs text-slate-600 mt-0.5">Repeat the full exercise sequence</p>
+              <h2 className="text-xs uppercase tracking-wider" style={{ color: accent }}>Rounds</h2>
+              <p className="text-xs text-white/25 mt-0.5">Repeat the full exercise sequence</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               <button
                 onClick={() => setRounds(r => Math.max(1, r - 1))}
-                className="w-9 h-9 rounded-xl border border-white/10 hover:bg-white/8 text-slate-300 font-bold text-lg flex items-center justify-center transition-colors"
+                className="w-8 h-8 rounded-lg border border-white/10 text-white/40 hover:text-white/70 flex items-center justify-center text-lg transition-colors"
               >−</button>
-              <span className="text-2xl font-black text-slate-100 w-8 text-center">{rounds}</span>
+              <span className="text-xl font-light text-white/70 w-6 text-center">{rounds}</span>
               <button
                 onClick={() => setRounds(r => r + 1)}
-                className="w-9 h-9 rounded-xl border border-white/10 hover:bg-white/8 text-slate-300 font-bold text-lg flex items-center justify-center transition-colors"
+                className="w-8 h-8 rounded-lg border border-white/10 text-white/40 hover:text-white/70 flex items-center justify-center text-lg transition-colors"
               >+</button>
             </div>
           </div>
         </div>
 
         {/* Exercises */}
-        <div className="rounded-2xl border border-white/8 bg-[#0c0c14] p-5">
+        <div className="rounded-2xl border border-white/8 bg-[#161616] p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-bold text-slate-300">
-              Exercises
-              <span className="ml-2 text-xs font-normal text-slate-600">({exercises.length})</span>
+            <h2 className="text-xs uppercase tracking-wider" style={{ color: accent }}>
+              Exercises <span className="opacity-50">({exercises.length})</span>
             </h2>
             <button
               onClick={addExercise}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-700/50 to-purple-700/50 hover:from-blue-600/60 hover:to-purple-600/60 border border-purple-700/40 text-purple-300 text-xs font-semibold transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 text-white/40 hover:text-white/70 text-xs transition-all"
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
-              Add Exercise
+              Add
             </button>
           </div>
 
           {exercises.length === 0 ? (
-            <p className="text-center text-slate-600 py-8 text-sm">
-              No exercises yet. Add one above.
+            <p className="text-center text-white/20 py-8 text-sm">
+              No exercises yet.
             </p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {exercises.map((ex, i) => (
                 <div
                   key={ex.id}
-                  className="flex items-center gap-2 p-3 rounded-xl bg-[#060609] border border-white/6 group"
+                  className="flex items-center gap-3 py-2.5 px-3 rounded-xl bg-[#0d0d0d] border border-white/5 group"
                 >
-                  <span className="w-6 h-6 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-800/60 to-purple-800/60 text-xs font-bold text-purple-300 shrink-0">
-                    {i + 1}
-                  </span>
+                  <span className="text-xs text-white/20 w-4 text-right shrink-0">{i + 1}</span>
                   <input
                     type="text"
                     value={ex.name}
                     onChange={e => updateExerciseName(ex.id, e.target.value)}
-                    className="flex-1 bg-transparent text-slate-200 text-sm placeholder-slate-600 focus:outline-none min-w-0"
+                    className="flex-1 bg-transparent text-white/70 text-sm placeholder-white/20 focus:outline-none min-w-0"
                     placeholder="Exercise name"
                   />
                   <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => moveExercise(i, 'up')}
                       disabled={i === 0}
-                      className="p-1.5 rounded-lg hover:bg-white/8 text-slate-600 hover:text-slate-300 disabled:opacity-30 transition-colors"
+                      className="p-1.5 text-white/20 hover:text-white/60 disabled:opacity-20 transition-colors"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
@@ -237,7 +236,7 @@ export default function RoutineEditor({ routineId }: Props) {
                     <button
                       onClick={() => moveExercise(i, 'down')}
                       disabled={i === exercises.length - 1}
-                      className="p-1.5 rounded-lg hover:bg-white/8 text-slate-600 hover:text-slate-300 disabled:opacity-30 transition-colors"
+                      className="p-1.5 text-white/20 hover:text-white/60 disabled:opacity-20 transition-colors"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -245,7 +244,7 @@ export default function RoutineEditor({ routineId }: Props) {
                     </button>
                     <button
                       onClick={() => removeExercise(ex.id)}
-                      className="p-1.5 rounded-lg hover:bg-red-900/30 text-slate-600 hover:text-red-400 transition-colors"
+                      className="p-1.5 text-white/20 hover:text-red-400/60 transition-colors"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -259,36 +258,36 @@ export default function RoutineEditor({ routineId }: Props) {
         </div>
 
         {/* Sequence preview */}
-        <div className="rounded-2xl border border-white/8 bg-[#0c0c14] p-5">
-          <h2 className="text-sm font-bold text-slate-300 mb-3">Sequence Preview</h2>
+        <div className="rounded-2xl border border-white/8 bg-[#161616] p-5">
+          <h2 className="text-xs uppercase tracking-wider mb-3" style={{ color: accent }}>Sequence</h2>
           <div className="flex flex-wrap gap-1.5 text-xs">
             {warmupDuration > 0 && (
-              <span className="px-2.5 py-1 rounded-full bg-[#0a0010]/90 text-[#dd00ff] border border-[#dd00ff]/25">Warm Up</span>
+              <span className="px-2.5 py-1 rounded-full bg-white/5 text-white/40 border border-white/8">Warm Up</span>
             )}
             {Array.from({ length: rounds }).map((_, r) => (
               <>
                 {rounds > 1 && (
-                  <span key={`round-${r}`} className="px-2.5 py-1 rounded-full bg-white/5 text-slate-500 border border-white/10 text-xs">
-                    Round {r + 1}
+                  <span key={`round-${r}`} className="px-2.5 py-1 rounded-full bg-white/3 text-white/20 border border-white/6">
+                    R{r + 1}
                   </span>
                 )}
                 {exercises.map((ex, i) => (
                   <>
-                    <span key={`ex-${r}-${ex.id}`} className="px-2.5 py-1 rounded-full bg-[#0f0005]/90 text-[#ff003c] border border-[#ff003c]/25">
+                    <span key={`ex-${r}-${ex.id}`} className="px-2.5 py-1 rounded-full bg-white/5 text-white/50 border border-white/8">
                       {ex.name || `Exercise ${i + 1}`}
                     </span>
                     {i < exercises.length - 1 && restDuration > 0 && (
-                      <span key={`rest-${r}-${ex.id}`} className="px-2.5 py-1 rounded-full bg-[#04000f]/90 text-[#7700ff] border border-[#7700ff]/25">Rest</span>
+                      <span key={`rest-${r}-${ex.id}`} className="px-2.5 py-1 rounded-full bg-white/3 text-white/25 border border-white/6">Rest</span>
                     )}
                   </>
                 ))}
                 {r < rounds - 1 && restDuration > 0 && (
-                  <span key={`between-${r}`} className="px-2.5 py-1 rounded-full bg-[#04000f]/90 text-[#7700ff] border border-[#7700ff]/25">Rest</span>
+                  <span key={`between-${r}`} className="px-2.5 py-1 rounded-full bg-white/3 text-white/25 border border-white/6">Rest</span>
                 )}
               </>
             ))}
             {cooldownDuration > 0 && (
-              <span className="px-2.5 py-1 rounded-full bg-[#00071a]/90 text-[#1d5dfc] border border-[#1d5dfc]/25">Cool Down</span>
+              <span className="px-2.5 py-1 rounded-full bg-white/5 text-white/40 border border-white/8">Cool Down</span>
             )}
           </div>
         </div>

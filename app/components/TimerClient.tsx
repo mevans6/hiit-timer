@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getRoutine } from '../lib/storage';
 import { playSoundForPhase, playCountdownTick, playComplete } from '../lib/sounds';
 import { Phase, PhaseType, Routine } from '../types';
+import { useTheme } from '../lib/theme';
 
 // ─── Phase sequence builder ───────────────────────────────────────────────────
 
@@ -41,58 +42,16 @@ function buildSequence(routine: Routine): Phase[] {
   return phases;
 }
 
-// ─── Phase style config ───────────────────────────────────────────────────────
+// ─── Phase config ─────────────────────────────────────────────────────────────
 
 const PHASE_CONFIG: Record<PhaseType, {
-  color: string;
-  glow: string;
-  bg: string;
-  border: string;
-  badge: string;
-  ringColor: string;
-  glowColor: string;
-  icon: string;
+  label: string;
+  description: (phaseName: string) => string;
 }> = {
-  warmup: {
-    color: 'text-[#dd00ff]',
-    glow: 'drop-shadow-[0_0_60px_rgba(221,0,255,1)] drop-shadow-[0_0_20px_rgba(221,0,255,0.8)]',
-    bg: 'bg-[#120018]/90',
-    border: 'border-[#dd00ff]/20',
-    badge: 'bg-[#0a0010]/95 text-[#dd00ff] border-[#dd00ff]/30',
-    ringColor: '#dd00ff',
-    glowColor: 'bg-[#dd00ff]',
-    icon: '🔥',
-  },
-  exercise: {
-    color: 'text-[#ff003c]',
-    glow: 'drop-shadow-[0_0_60px_rgba(255,0,60,1)] drop-shadow-[0_0_20px_rgba(255,0,60,0.8)]',
-    bg: 'bg-[#180008]/90',
-    border: 'border-[#ff003c]/20',
-    badge: 'bg-[#0f0005]/95 text-[#ff003c] border-[#ff003c]/30',
-    ringColor: '#ff003c',
-    glowColor: 'bg-[#ff003c]',
-    icon: '⚡',
-  },
-  rest: {
-    color: 'text-[#7700ff]',
-    glow: 'drop-shadow-[0_0_60px_rgba(119,0,255,1)] drop-shadow-[0_0_20px_rgba(119,0,255,0.8)]',
-    bg: 'bg-[#080018]/90',
-    border: 'border-[#7700ff]/20',
-    badge: 'bg-[#04000f]/95 text-[#7700ff] border-[#7700ff]/30',
-    ringColor: '#7700ff',
-    glowColor: 'bg-[#7700ff]',
-    icon: '💤',
-  },
-  cooldown: {
-    color: 'text-[#1d5dfc]',
-    glow: 'drop-shadow-[0_0_60px_rgba(29,93,252,1)] drop-shadow-[0_0_20px_rgba(29,93,252,0.8)]',
-    bg: 'bg-[#00071a]/90',
-    border: 'border-[#1d5dfc]/20',
-    badge: 'bg-[#00071a]/95 text-[#1d5dfc] border-[#1d5dfc]/30',
-    ringColor: '#1d5dfc',
-    glowColor: 'bg-[#1d5dfc]',
-    icon: '❄️',
-  },
+  warmup:   { label: 'WARM UP',   description: () => 'Warm up in progress.' },
+  exercise: { label: 'WORK',      description: (n) => `${n}` },
+  rest:     { label: 'REST',      description: () => 'Rest period.' },
+  cooldown: { label: 'COOL DOWN', description: () => 'Cool down in progress.' },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -109,6 +68,7 @@ type TimerState = 'idle' | 'running' | 'paused' | 'done';
 
 export default function TimerClient({ routineId }: { routineId: string }) {
   const router = useRouter();
+  const { accent } = useTheme();
   const [routine, setRoutine] = useState<Routine | null>(null);
   const [phases, setPhases] = useState<Phase[]>([]);
 
@@ -122,7 +82,6 @@ export default function TimerClient({ routineId }: { routineId: string }) {
   const tickRef = useRef(false);
   const startTimeRef = useRef<Date | null>(null);
 
-  // Load routine
   useEffect(() => {
     const r = getRoutine(routineId);
     if (r) {
@@ -135,15 +94,15 @@ export default function TimerClient({ routineId }: { routineId: string }) {
 
   const currentPhase = phases[phaseIndex] ?? null;
   const cfg = currentPhase ? PHASE_CONFIG[currentPhase.type] : PHASE_CONFIG.warmup;
+  // accent comes from global theme
 
-  // Progress for the ring
   const progress = currentPhase
     ? ((currentPhase.duration - timeLeft) / currentPhase.duration) * 100
     : 0;
 
-  const circumference = 2 * Math.PI * 168; // r=168
+  const R = 168;
+  const circumference = 2 * Math.PI * R;
 
-  // Advance to next phase or finish
   const advancePhase = useCallback((nextIndex: number, allPhases: Phase[]) => {
     if (nextIndex >= allPhases.length) {
       setState('done');
@@ -156,7 +115,6 @@ export default function TimerClient({ routineId }: { routineId: string }) {
     playSoundForPhase(next.type);
   }, []);
 
-  // Timer tick
   useEffect(() => {
     if (state !== 'running') {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -165,15 +123,12 @@ export default function TimerClient({ routineId }: { routineId: string }) {
 
     intervalRef.current = setInterval(() => {
       setTimeLeft(prev => {
-        // Countdown tick sound for last 3 seconds
         if (prev <= 3 && prev > 1) {
           playCountdownTick();
           setTickAnim(true);
           setTimeout(() => setTickAnim(false), 300);
         }
-
         if (prev <= 1) {
-          // Advance phase on next render cycle
           tickRef.current = true;
           return 0;
         }
@@ -186,7 +141,6 @@ export default function TimerClient({ routineId }: { routineId: string }) {
     };
   }, [state]);
 
-  // Watch for phase advancement
   useEffect(() => {
     if (tickRef.current && timeLeft === 0 && state === 'running') {
       tickRef.current = false;
@@ -202,9 +156,7 @@ export default function TimerClient({ routineId }: { routineId: string }) {
     setState('running');
   }
 
-  function pause() {
-    setState('paused');
-  }
+  function pause() { setState('paused'); }
 
   function stop() {
     if (intervalRef.current) clearInterval(intervalRef.current);
@@ -349,243 +301,196 @@ export default function TimerClient({ routineId }: { routineId: string }) {
     downloadFile(lines.join('\n'), `${dateStr} ${routine.name}.txt`, 'text/plain');
   }
 
-  // Phase step indicators
-  const totalExercises = routine?.exercises.length ?? 0;
-  const currentExerciseNum = currentPhase?.type === 'exercise'
-    ? Math.floor(phaseIndex / 2) + (routine?.warmupDuration ? 0 : 0)
-    : null;
-
   if (!routine) {
     return (
-      <div className="min-h-screen bg-[#010108] flex items-center justify-center">
-        <p className="text-slate-500">Routine not found.</p>
+      <div className="min-h-screen bg-[#0d0d0d] flex items-center justify-center">
+        <p className="text-white/30 text-sm">Routine not found.</p>
       </div>
     );
   }
 
-  return (
-    <div className={`min-h-screen bg-[#010108] flex flex-col transition-colors duration-700`}>
-      {/* Header */}
-      <header className="border-b border-white/10 bg-[#08080f]">
-        <div className="max-w-lg mx-auto px-4 py-4 flex items-center gap-3">
-          <button
-            onClick={() => { stop(); router.push('/'); }}
-            className="p-2 rounded-xl hover:bg-white/8 text-slate-400 hover:text-slate-200 transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-          </button>
-          <h1 className="text-lg font-bold text-slate-100 flex-1 truncate">{routine.name}</h1>
-          <span className="text-xs text-slate-600">
-            {totalExercises} exercise{totalExercises !== 1 ? 's' : ''}
-            {(routine.rounds ?? 1) > 1 && ` · ${routine.rounds} rounds`}
-          </span>
-        </div>
-      </header>
+  const phaseLabel = currentPhase ? cfg.label : '';
+  const phaseDesc = currentPhase
+    ? cfg.description(currentPhase.label)
+    : '';
 
-      {/* Phase progress bar */}
-      <div className="flex h-1">
-        {phases.map((p, i) => (
-          <div
-            key={i}
-            className={`flex-1 transition-all duration-500 ${
-              i < phaseIndex
-                ? PHASE_CONFIG[p.type].color.replace('text-', 'bg-').replace('-400', '-600')
-                : i === phaseIndex && state !== 'idle'
-                ? PHASE_CONFIG[p.type].color.replace('text-', 'bg-').replace('-400', '-500')
-                : 'bg-white/5'
-            }`}
-          />
-        ))}
+  return (
+    <div className="min-h-screen bg-[#0d0d0d] flex flex-col">
+      {/* Back button */}
+      <div className="absolute top-5 left-5 z-10">
+        <button
+          onClick={() => { stop(); router.push('/'); }}
+          className="p-2 text-white/25 hover:text-white/60 transition-colors"
+          title="Back"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+        </button>
       </div>
 
-      <main className="flex-1 flex flex-col items-center justify-center px-4 py-8 gap-8">
+      <main className="flex-1 flex flex-col items-center justify-center px-6 gap-12">
 
-        {/* Phase label */}
-        {state !== 'done' && currentPhase && (
-          <div className="text-center space-y-1.5">
-            <span className={`inline-flex items-center gap-3 px-7 py-3 rounded-full border text-xl font-bold tracking-wide ${cfg.badge}`}>
-              <span>{cfg.icon}</span>
-              {currentPhase.type === 'warmup' ? 'Warm Up' :
-               currentPhase.type === 'rest' ? (currentPhase.label === 'Rest' ? 'Rest' : `Next: Round ${currentPhase.label.replace('Round ', '')}`) :
-               currentPhase.type === 'cooldown' ? 'Cool Down' :
-               currentPhase.label}
-            </span>
-            {(routine.rounds ?? 1) > 1 && currentPhase.round && (
-              <p className="text-xs text-slate-600 tracking-widest uppercase">
-                Round {currentPhase.round} of {routine.rounds}
-              </p>
-            )}
-          </div>
-        )}
+        {state === 'done' ? (
+          /* ── Done state ── */
+          <div className="text-center space-y-4">
+            <p className="text-xs tracking-[0.25em] uppercase text-white/30">Complete</p>
+            <h2 className="text-4xl font-light text-white">{routine.name}</h2>
+            <p className="text-white/30 text-sm">Workout finished.</p>
 
-        {/* Done state */}
-        {state === 'done' && (
-          <div className="text-center space-y-2">
-            <div className="text-6xl mb-1">🎉</div>
-            <h2 className="text-3xl font-black text-slate-100">Workout Complete!</h2>
-            <p className="text-slate-500 text-sm">Great work finishing {routine.name}</p>
-          </div>
-        )}
-
-        {/* Timer ring */}
-        {state !== 'done' && (
-          <div className="relative flex items-center justify-center w-full max-w-[420px]">
-            {/* Glow background */}
-            <div className={`absolute w-[28rem] h-[28rem] rounded-full blur-[100px] opacity-30 transition-colors duration-700 ${cfg.glowColor}`} />
-
-            <svg viewBox="0 0 420 420" className="w-full rotate-[-90deg]">
-              {/* Track */}
-              <circle
-                cx="210" cy="210" r="168"
-                fill="none"
-                stroke="rgba(255,255,255,0.05)"
-                strokeWidth="8"
-              />
-              {/* Progress */}
-              <circle
-                cx="210" cy="210" r="168"
-                fill="none"
-                strokeWidth="8"
-                strokeLinecap="round"
-                stroke={cfg.ringColor}
-                strokeDasharray={circumference}
-                strokeDashoffset={circumference - (circumference * progress) / 100}
-                style={{ transition: 'stroke-dashoffset 0.9s linear, stroke 0.7s ease', filter: `drop-shadow(0 0 8px ${cfg.ringColor}) drop-shadow(0 0 16px ${cfg.ringColor})` }}
-              />
-            </svg>
-
-            {/* Time display */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span
-                className={`font-mono font-black tracking-tighter transition-colors duration-700 ${cfg.color} ${cfg.glow} ${
-                  tickAnim ? 'tick-animate' : ''
-                } ${state === 'paused' ? 'opacity-50' : ''}`}
-                style={{ fontSize: 'clamp(2.5rem, 11vw, 4.5rem)', lineHeight: 1 }}
-              >
-                {formatTime(timeLeft)}
-              </span>
-              {state === 'paused' && (
-                <span className="text-xs text-slate-500 mt-2 uppercase tracking-widest">Paused</span>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Controls */}
-        <div className="flex items-center gap-4">
-          {state === 'done' ? (
-            <div className="flex flex-col items-center gap-3 w-full max-w-xs">
-              {/* Export dropdown */}
+            <div className="flex flex-col items-center gap-3 pt-8 w-full max-w-xs">
               <div className="relative w-full">
                 <button
                   onClick={() => setShowExportMenu(v => !v)}
-                  className="w-full flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-[#dd00ff]/20 to-[#7700ff]/20 hover:from-[#dd00ff]/30 hover:to-[#7700ff]/30 border border-[#dd00ff]/40 hover:border-[#dd00ff]/60 text-[#dd00ff] font-bold transition-all"
+                  className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-white/10 text-white/50 hover:text-white/80 hover:border-white/20 text-sm transition-all"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
                   Export
-                  <svg className={`w-4 h-4 ml-auto transition-transform ${showExportMenu ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className={`w-3.5 h-3.5 transition-transform ${showExportMenu ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
                 {showExportMenu && (
-                  <div className="absolute bottom-full mb-2 left-0 right-0 rounded-2xl border border-white/10 bg-[#0c0c14] overflow-hidden shadow-2xl z-10">
+                  <div className="absolute bottom-full mb-2 left-0 right-0 rounded-xl border border-white/10 bg-[#161616] overflow-hidden shadow-2xl z-10">
                     {[
-                      { label: 'Markdown', sub: 'Obsidian / .md', icon: 'M', fn: exportMarkdown },
-                      { label: 'CSV', sub: 'Spreadsheet / .csv', icon: ',', fn: exportCSV },
-                      { label: 'JSON', sub: 'Structured data / .json', icon: '{}', fn: exportJSON },
-                      { label: 'Plain Text', sub: 'Simple summary / .txt', icon: 'T', fn: exportText },
+                      { label: 'Markdown', sub: '.md', fn: exportMarkdown },
+                      { label: 'CSV', sub: '.csv', fn: exportCSV },
+                      { label: 'JSON', sub: '.json', fn: exportJSON },
+                      { label: 'Plain Text', sub: '.txt', fn: exportText },
                     ].map(opt => (
                       <button
                         key={opt.label}
                         onClick={opt.fn}
-                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 text-left"
+                        className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 text-left"
                       >
-                        <span className="w-8 h-8 rounded-lg bg-[#dd00ff]/15 border border-[#dd00ff]/20 text-[#dd00ff] text-xs font-black flex items-center justify-center shrink-0">
-                          {opt.icon}
-                        </span>
-                        <div>
-                          <p className="text-sm font-semibold text-slate-200">{opt.label}</p>
-                          <p className="text-xs text-slate-600">{opt.sub}</p>
-                        </div>
+                        <span className="text-sm text-white/70">{opt.label}</span>
+                        <span className="text-xs text-white/25">{opt.sub}</span>
                       </button>
                     ))}
                   </div>
                 )}
               </div>
-              <div className="flex items-center gap-3 w-full">
+              <div className="flex gap-3 w-full">
                 <button
                   onClick={restart}
-                  className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-2xl border border-white/10 hover:bg-white/5 text-slate-300 font-semibold transition-all"
+                  className="flex-1 px-4 py-3 rounded-xl border border-white/10 text-white/50 hover:text-white/80 hover:border-white/20 text-sm transition-all"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
                   Restart
                 </button>
                 <button
                   onClick={() => router.push('/')}
-                  className="flex-1 px-5 py-3 rounded-2xl border border-white/10 hover:bg-white/5 text-slate-300 font-semibold transition-all"
+                  className="flex-1 px-4 py-3 rounded-xl border border-white/10 text-white/50 hover:text-white/80 hover:border-white/20 text-sm transition-all"
                 >
                   Done
                 </button>
               </div>
             </div>
-          ) : (
-            <>
-              {/* Stop */}
+          </div>
+        ) : (
+          /* ── Timer state ── */
+          <>
+            {/* Ring with content inside */}
+            <div className="relative flex items-center justify-center w-full max-w-[380px] aspect-square">
+              <svg viewBox="0 0 420 420" className="w-full rotate-[-90deg] absolute inset-0">
+                {/* Track */}
+                <circle
+                  cx="210" cy="210" r={R}
+                  fill="none"
+                  stroke="rgba(255,255,255,0.07)"
+                  strokeWidth="6"
+                />
+                {/* Progress */}
+                <circle
+                  cx="210" cy="210" r={R}
+                  fill="none"
+                  strokeWidth="6"
+                  strokeLinecap="round"
+                  stroke={currentPhase?.type === 'rest' ? '#6b7280' : accent}
+                  strokeDasharray={circumference}
+                  strokeDashoffset={circumference - (circumference * progress) / 100}
+                  style={{ transition: 'stroke-dashoffset 0.9s linear, stroke 0.7s ease' }}
+                />
+              </svg>
+
+              {/* Inner text */}
+              <div className="relative flex flex-col items-center justify-center gap-2 text-center px-10">
+                <span
+                  className="text-xs font-semibold tracking-[0.2em] uppercase transition-colors duration-700"
+                  style={{ color: currentPhase?.type === 'rest' ? '#6b7280' : accent }}
+                >
+                  {phaseLabel}
+                </span>
+
+                <span
+                  className={`font-light text-white transition-opacity ${
+                    state === 'paused' ? 'opacity-40' : 'opacity-100'
+                  } ${tickAnim ? 'tick-animate' : ''}`}
+                  style={{ fontSize: 'clamp(3rem, 14vw, 5rem)', lineHeight: 1, letterSpacing: '-0.02em' }}
+                >
+                  {formatTime(timeLeft)}
+                </span>
+
+                <span className="text-sm text-white/30 mt-1">
+                  {state === 'paused' ? 'Paused.' : phaseDesc}
+                </span>
+
+                {(routine.rounds ?? 1) > 1 && currentPhase?.round && (
+                  <span className="text-xs text-white/20 tracking-wider uppercase">
+                    Round {currentPhase.round} / {routine.rounds}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Controls */}
+            <div className="flex items-center gap-12">
+              {/* Restart */}
               <button
-                onClick={stop}
-                disabled={state === 'idle'}
-                className="w-12 h-12 rounded-2xl border border-white/10 hover:bg-white/8 text-slate-400 hover:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center"
-                title="Stop"
+                onClick={restart}
+                className="text-white/35 hover:text-white/70 transition-colors"
+                title="Restart"
               >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <rect x="6" y="6" width="12" height="12" rx="2" />
+                <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
                 </svg>
               </button>
 
-              {/* Start / Pause */}
+              {/* Play / Pause */}
               {state === 'running' ? (
                 <button
                   onClick={pause}
-                  className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white shadow-xl shadow-purple-900/50 transition-all active:scale-95 flex items-center justify-center"
+                  className="text-white/70 hover:text-white transition-colors"
                   title="Pause"
                 >
-                  <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" />
                   </svg>
                 </button>
               ) : (
                 <button
                   onClick={start}
-                  className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-xl shadow-blue-900/50 transition-all active:scale-95 flex items-center justify-center"
+                  className="text-white/70 hover:text-white transition-colors"
                   title="Start"
                 >
-                  <svg className="w-9 h-9 ml-1" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z" />
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
                   </svg>
                 </button>
               )}
 
-              {/* Skip */}
+              {/* Stop */}
               <button
-                onClick={() => advancePhase(phaseIndex + 1, phases)}
-                disabled={state === 'idle' || phaseIndex >= phases.length - 1}
-                className="w-12 h-12 rounded-2xl border border-white/10 hover:bg-white/8 text-slate-400 hover:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center"
-                title="Skip to next phase"
+                onClick={stop}
+                disabled={state === 'idle'}
+                className="text-white/35 hover:text-white/70 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                title="Stop"
               >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6v12h2V6h-2z" />
+                <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 7.5A2.25 2.25 0 0 1 7.5 5.25h9a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25h-9a2.25 2.25 0 0 1-2.25-2.25v-9Z" />
                 </svg>
               </button>
-            </>
-          )}
-        </div>
-
+            </div>
+          </>
+        )}
       </main>
     </div>
   );

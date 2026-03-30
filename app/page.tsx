@@ -4,15 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getRoutines, deleteRoutine } from './lib/storage';
 import { Routine } from './types';
-
-function formatDuration(seconds: number): string {
-  if (seconds === 0) return '—';
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  if (m === 0) return `${s}s`;
-  if (s === 0) return `${m}m`;
-  return `${m}m ${s}s`;
-}
+import { useTheme, THEME_COLORS, ThemeColor } from './lib/theme';
 
 function totalTime(routine: Routine): string {
   const n = routine.exercises.length;
@@ -31,8 +23,66 @@ function totalTime(routine: Routine): string {
   return `${m}m ${s}s`;
 }
 
+function ThemeModal({ onClose }: { onClose: () => void }) {
+  const { accent, setAccent } = useTheme();
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center px-6"
+      onClick={onClose}
+    >
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/70" />
+
+      {/* Panel */}
+      <div
+        className="relative w-full max-w-md bg-[#1a1a1a] rounded-3xl p-8 shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      >
+        <p className="text-xs tracking-[0.2em] uppercase text-white/30 mb-2">Display</p>
+        <h2 className="text-3xl font-light text-white mb-1">Theme Color</h2>
+        <p className="text-sm text-white/35 mb-7">Pick a vivid accent for the timer ring and controls.</p>
+
+        <button
+          onClick={onClose}
+          className="absolute top-6 right-6 w-9 h-9 rounded-full bg-white/8 hover:bg-white/14 flex items-center justify-center text-white/50 hover:text-white/80 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
+        <div className="grid grid-cols-2 gap-3">
+          {THEME_COLORS.map(color => {
+            const isSelected = accent === color.value;
+            return (
+              <button
+                key={color.value}
+                onClick={() => setAccent(color.value as ThemeColor)}
+                className="flex items-center gap-3 px-4 py-3.5 rounded-2xl border transition-all text-left"
+                style={{
+                  borderColor: isSelected ? color.value : 'rgba(255,255,255,0.08)',
+                  background: isSelected ? 'rgba(255,255,255,0.04)' : 'transparent',
+                }}
+              >
+                <span
+                  className="w-8 h-8 rounded-full shrink-0"
+                  style={{ background: color.value }}
+                />
+                <span className="text-sm font-medium text-white/70">{color.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function HomePage() {
   const [routines, setRoutines] = useState<Routine[]>([]);
+  const [showTheme, setShowTheme] = useState(false);
+  const { accent } = useTheme();
 
   useEffect(() => {
     setRoutines(getRoutines());
@@ -47,110 +97,88 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#010108]">
+    <div className="min-h-screen bg-[#0d0d0d]">
       {/* Header */}
-      <header className="border-b border-white/10 bg-[#08080f]">
-        <div className="max-w-2xl mx-auto px-4 py-5 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              HIIT Timer
-            </h1>
-            <p className="text-xs text-slate-500 mt-0.5">Interval Training</p>
-          </div>
-          <Link
-            href="/routine/new"
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-sm font-semibold transition-all shadow-lg shadow-blue-900/30"
+      <header className="px-6 py-6 flex items-center justify-between max-w-lg mx-auto">
+        <div className="flex items-center gap-3">
+          {/* Gear icon */}
+          <button
+            onClick={() => setShowTheme(true)}
+            className="p-1.5 text-white/25 hover:text-white/60 transition-colors"
+            title="Theme"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
             </svg>
-            New Routine
-          </Link>
+          </button>
+          <h1 className="text-lg font-medium tracking-tight" style={{ color: accent }}>
+            HIIT Timer
+          </h1>
         </div>
+        <Link
+          href="/routine/new"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-white/10 text-white/50 hover:text-white/80 hover:border-white/20 text-sm transition-all"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          New
+        </Link>
       </header>
 
       {/* Routines list */}
-      <main className="max-w-2xl mx-auto px-4 py-8">
+      <main className="max-w-lg mx-auto px-6 pb-12">
         {routines.length === 0 ? (
-          <div className="text-center py-24">
-            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-900/40 to-purple-900/40 border border-purple-800/40 flex items-center justify-center">
-              <svg className="w-9 h-9 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <p className="text-slate-400 text-lg font-medium">No routines yet</p>
-            <p className="text-slate-600 text-sm mt-2">Create your first HIIT routine to get started</p>
+          <div className="text-center py-32">
+            <p className="text-white/25 text-sm">No routines yet.</p>
             <Link
               href="/routine/new"
-              className="inline-flex items-center gap-2 mt-6 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold transition-all shadow-lg shadow-blue-900/30"
+              className="inline-flex items-center gap-1.5 mt-5 px-5 py-2.5 rounded-xl border border-white/10 text-white/40 hover:text-white/70 hover:border-white/20 text-sm transition-all"
             >
-              Create Routine
+              Create your first routine
             </Link>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {routines.map(routine => (
               <div key={routine.id} className="group relative">
                 <Link
                   href={`/timer/${routine.id}`}
-                  className="block rounded-2xl border border-white/8 bg-[#0c0c14] hover:bg-[#14142a] hover:border-purple-800/50 transition-all p-5 shadow-xl"
+                  className="flex items-center justify-between rounded-2xl border border-white/8 bg-[#161616] hover:bg-[#1c1c1c] hover:border-white/12 transition-all px-5 py-4"
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <h2 className="text-lg font-bold text-slate-100 truncate">{routine.name}</h2>
-                      <p className="text-sm text-slate-500 mt-0.5">
-                        {routine.exercises.length} exercise{routine.exercises.length !== 1 ? 's' : ''}
-                        {(routine.rounds ?? 1) > 1 && ` · ${routine.rounds} rounds`}
-                        {' '}&middot; {totalTime(routine)} total
-                      </p>
-                      <div className="flex flex-wrap gap-2 mt-3">
-                        {routine.warmupDuration > 0 && (
-                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-[#0a0010]/90 text-[#dd00ff] border border-[#dd00ff]/25">
-                            Warm {formatDuration(routine.warmupDuration)}
-                          </span>
-                        )}
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-[#0f0005]/90 text-[#ff003c] border border-[#ff003c]/25">
-                          Work {formatDuration(routine.exerciseDuration)}
-                        </span>
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-[#04000f]/90 text-[#7700ff] border border-[#7700ff]/25">
-                          Rest {formatDuration(routine.restDuration)}
-                        </span>
-                        {routine.cooldownDuration > 0 && (
-                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-[#00071a]/90 text-[#1d5dfc] border border-[#1d5dfc]/25">
-                            Cool {formatDuration(routine.cooldownDuration)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-900/40 group-hover:scale-105 group-hover:brightness-110 transition-all">
-                        <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M8 5v14l11-7z" />
-                        </svg>
-                      </div>
-                    </div>
+                  <div className="min-w-0">
+                    <h2 className="text-sm font-medium text-white/80 truncate">{routine.name}</h2>
+                    <p className="text-xs text-white/25 mt-0.5">
+                      {routine.exercises.length} exercise{routine.exercises.length !== 1 ? 's' : ''}
+                      {(routine.rounds ?? 1) > 1 && ` · ${routine.rounds} rounds`}
+                      {' · '}{totalTime(routine)}
+                    </p>
                   </div>
+                  <svg className="w-4 h-4 text-white/20 shrink-0 ml-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                  </svg>
                 </Link>
 
-                {/* Edit & Delete actions */}
-                <div className="absolute top-4 right-16 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                {/* Edit & Delete */}
+                <div className="absolute top-1/2 -translate-y-1/2 right-10 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                   <Link
                     href={`/routine/${routine.id}`}
                     onClick={e => e.stopPropagation()}
-                    className="p-1.5 rounded-lg hover:bg-white/10 text-slate-500 hover:text-slate-300 transition-colors"
+                    className="p-2 text-white/25 hover:text-white/60 transition-colors"
                     title="Edit"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
                     </svg>
                   </Link>
                   <button
                     onClick={e => handleDelete(routine.id, e)}
-                    className="p-1.5 rounded-lg hover:bg-red-900/30 text-slate-500 hover:text-red-400 transition-colors"
+                    className="p-2 text-white/25 hover:text-red-400/70 transition-colors"
                     title="Delete"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
                 </div>
@@ -159,6 +187,8 @@ export default function HomePage() {
           </div>
         )}
       </main>
+
+      {showTheme && <ThemeModal onClose={() => setShowTheme(false)} />}
     </div>
   );
 }
